@@ -302,9 +302,10 @@ def queue_position():
     task_id = request.args.get('task_id')
     with task_lock:
         if task_id in queue:
-            position = queue.index(task_id)
-            return jsonify({'position': position})
-        return jsonify({'position': 0})
+            return jsonify({'position': queue.index(task_id)})
+        elif task_id in completed_tasks:
+            return jsonify({'position': 0})
+        return jsonify({'position': -1})  # -1 indicates task not found
 
 @app.route('/api/status')
 def task_status():
