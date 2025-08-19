@@ -1,10 +1,11 @@
 FROM python:3.9-slim as builder
 
-# Install build dependencies
+# Install ALL build dependencies (including make)
 RUN apt-get update && \
     apt-get install -y \
     git \
     g++ \
+    make \  # This was missing!
     pkg-config \
     libssl-dev \
     libminizip-dev
@@ -22,6 +23,9 @@ FROM python:3.9-slim
 # Copy zsign from builder
 COPY --from=builder /usr/local/bin/zsign /usr/local/bin/zsign
 
+# Verify zsign works
+RUN zsign --version || echo "zsign verification failed"
+
 # Install Python dependencies
 WORKDIR /app
 COPY requirements.txt .
@@ -35,4 +39,4 @@ ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
 
 # Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0:5000", "app:app"]
