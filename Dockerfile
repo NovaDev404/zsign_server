@@ -5,10 +5,11 @@ RUN apt-get update && \
     apt-get install -y \
     git \
     g++ \
-    make \  # This was missing!
+    make \
     pkg-config \
     libssl-dev \
-    libminizip-dev
+    libminizip-dev \
+ && rm -rf /var/lib/apt/lists/*
 
 # Build zsign using the correct build path
 RUN git clone https://github.com/zhlynn/zsign.git && \
