@@ -5,6 +5,7 @@ import time
 import threading
 from datetime import datetime, timedelta
 from flask import Flask, request, render_template_string, send_file, jsonify, redirect, url_for
+os.environ['PATH'] = f"{os.environ.get('HOME', '')}/.local/bin:{os.environ.get('PATH', '')}"
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
