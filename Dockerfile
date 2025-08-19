@@ -4,15 +4,15 @@ FROM python:3.9-slim as builder
 RUN apt-get update && \
     apt-get install -y \
     git \
-    openssl \
+    g++ \
+    pkg-config \
     libssl-dev \
-    zlib1g-dev \
-    make \
-    g++
+    libminizip-dev
 
-# Build zsign
+# Build zsign using the correct build path
 RUN git clone https://github.com/zhlynn/zsign.git && \
-    cd zsign && \
+    cd zsign/build/linux && \
+    make clean && \
     make && \
     mv zsign /usr/local/bin/
 
