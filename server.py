@@ -4,7 +4,9 @@ import subprocess
 import time
 import threading
 from datetime import datetime, timedelta
-from flask import Flask, request, render_template_string, send_file, jsonify, redirect, url_for
+from flask import Flask, request, render_template_string, send_file, jsonify, redirect, url_for, Response, request, stream_with_context
+import re
+import mimetypes
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
@@ -352,27 +354,89 @@ def task_status():
             'filename': completed_tasks[task_id].get('filename')
         })
 
-@app.route('/download')
+@app.route('/download', methods=['GET', 'HEAD'])
 def download():
-    """Serve signed IPA file with expiration"""
     task_id = request.args.get('task_id')
     filename = request.args.get('filename', 'signed.ipa')
-    
-    # Cleanup expired files before serving
+
+    # Cleanup expired stuff (optional but good)
     cleanup_expired_files()
-    
+
     with task_lock:
-        if task_id in completed_tasks and completed_tasks[task_id]['status'] == 'completed':
-            try:
-                return send_file(
-                    completed_tasks[task_id]['signed_ipa'],
-                    as_attachment=True,
-                    download_name=filename
-                )
-            except FileNotFoundError:
-                return "File not found", 404
-    
-    return "Invalid or expired download link", 404
+        if task_id not in completed_tasks or completed_tasks[task_id]['status'] != 'completed':
+            return "Invalid or expired download link", 404
+        path = completed_tasks[task_id]['signed_ipa']
+
+    if not os.path.exists(path):
+        return "File not found", 404
+
+    size = os.path.getsize(path)
+    mime_type, _ = mimetypes.guess_type(path)
+    if not mime_type:
+        mime_type = 'application/octet-stream'
+
+    # Helper to stream a byte range
+    def stream_range(start, end, chunk_size=8192):
+        with open(path, 'rb') as f:
+            f.seek(start)
+            remaining = end - start + 1
+            while remaining > 0:
+                read_len = min(chunk_size, remaining)
+                chunk = f.read(read_len)
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                yield chunk
+
+    # If client requested a range
+    range_header = request.headers.get('Range', None)
+    if range_header:
+        m = re.match(r'bytes=(\d+)-(\d*)', range_header)
+        if not m:
+            return Response(status=416)
+        start = int(m.group(1))
+        end = int(m.group(2)) if m.group(2) else size - 1
+        if start >= size or start > end:
+            return Response(status=416)
+
+        end = min(end, size - 1)
+        length = end - start + 1
+
+        headers = {
+            'Content-Range': f'bytes {start}-{end}/{size}',
+            'Accept-Ranges': 'bytes',
+            'Content-Length': str(length),
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+
+        # HEAD should not return body
+        if request.method == 'HEAD':
+            return Response(status=206, headers=headers)
+
+        return Response(
+            stream_with_context(stream_range(start, end)),
+            status=206,
+            mimetype=mime_type,
+            headers=headers
+        )
+
+    # No Range header — normal full download (but still advertise Accept-Ranges)
+    headers = {
+        'Accept-Ranges': 'bytes',
+        'Content-Length': str(size),
+        'Content-Disposition': f'attachment; filename="{filename}"'
+    }
+
+    if request.method == 'HEAD':
+        return Response(status=200, headers=headers)
+
+    # stream entire file in chunks
+    return Response(
+        stream_with_context(stream_range(0, size - 1)),
+        status=200,
+        mimetype=mime_type,
+        headers=headers
+    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
