@@ -156,13 +156,27 @@ HTML_TEMPLATE = """
         }
         
         async function checkProcessingStatus() {
-            const response = await fetch(`/api/status?task_id=${taskId}`);
-            const data = await response.json();
-            
-            if (data.status === 'processing') {
-                setTimeout(checkProcessingStatus, 2000);
-            } else if (data.status === 'completed') {
-                showDownloadSection(data.filename);
+            try {
+                const response = await fetch(`/api/status?task_id=${taskId}`);
+                const data = await response.json();
+        
+                if (!response.ok) throw new Error(data.status || 'Unknown error');
+        
+                if (data.status === 'processing' || data.status === 'queued') {
+                    setTimeout(checkProcessingStatus, 2000);
+                } else if (data.status === 'completed') {
+                    showDownloadSection(data.filename);
+                } else if (data.status === 'not_found') {
+                    alert('Task not found. Please try again.');
+                    location.reload();
+                } else if (data.status.includes('error')) {
+                    alert(`Error: ${data.status}`);
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error checking status:', error);
+                alert('Failed to check status. Please try again.');
+                location.reload();
             }
         }
         
