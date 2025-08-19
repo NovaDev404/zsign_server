@@ -9,6 +9,7 @@ RUN apt-get update && \
     pkg-config \
     libssl-dev \
     libminizip-dev \
+    zlib1g-dev \
  && rm -rf /var/lib/apt/lists/*
 
 # Build zsign using the correct build path
