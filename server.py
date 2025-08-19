@@ -217,7 +217,8 @@ def cleanup_expired_files():
     
     with task_lock:
         for task_id, task_data in list(completed_tasks.items()):
-            if now - task_data['completed_time'] > timedelta(seconds=cleanup_interval):
+            # Only check tasks that have 'completed_time'
+            if 'completed_time' in task_data and now - task_data['completed_time'] > timedelta(seconds=cleanup_interval):
                 expired.append(task_id)
                 try:
                     os.remove(task_data['signed_ipa'])
