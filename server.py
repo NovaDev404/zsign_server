@@ -311,12 +311,16 @@ def task_status():
     """Check status of a processing task"""
     task_id = request.args.get('task_id')
     with task_lock:
-        if task_id in completed_tasks:
+        if task_id not in completed_tasks:
             return jsonify({
-                'status': completed_tasks[task_id]['status'],
-                'filename': completed_tasks[task_id].get('filename')
+                'status': 'not_found',
+                'filename': None
             })
-        return jsonify({'status': 'not_found'}), 404
+            
+        return jsonify({
+            'status': completed_tasks[task_id]['status'],
+            'filename': completed_tasks[task_id].get('filename')
+        })
 
 @app.route('/download')
 def download():
