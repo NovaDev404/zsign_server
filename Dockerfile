@@ -22,6 +22,9 @@ RUN git clone https://github.com/zhlynn/zsign.git && \
 # Final stage
 FROM python:3.9-slim
 
+# Install runtime dependencies for zsign
+RUN apt-get update && apt-get install -y libminizip1
+
 # Copy zsign from builder
 COPY --from=builder /usr/local/bin/zsign /usr/local/bin/zsign
 
