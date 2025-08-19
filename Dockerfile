@@ -17,7 +17,7 @@ RUN git clone https://github.com/zhlynn/zsign.git && \
     cd zsign/build/linux && \
     make clean && \
     make && \
-    mv zsign /usr/local/bin/
+    mv ../../bin/zsign /usr/local/bin/
 
 # Final stage
 FROM python:3.9-slim
