@@ -247,6 +247,20 @@ def process_queue():
                     p12_path = os.path.join(task_dir, 'cert.p12')
                     signed_ipa = os.path.join(task_dir, 'signed.ipa')
                     
+                    # Unzip IPA temporarily if needed (zsign may require extracted payload)
+                    payload_path = os.path.join(task_dir, 'Payload', 'LiveContainer.app')
+                    
+                    # Ensure _CodeSignature folders exist for all frameworks and plugins
+                    frameworks_to_sign = []
+                    for root, dirs, files in os.walk(payload_path):
+                        for d in dirs:
+                            if d.endswith('.framework') or d.endswith('.appex'):
+                                frameworks_to_sign.append(os.path.join(root, d))
+                    
+                    for fw_path in frameworks_to_sign:
+                        codesig_path = os.path.join(fw_path, '_CodeSignature')
+                        os.makedirs(codesig_path, exist_ok=True)
+                    
                     # Sign the IPA
                     subprocess.run([
                         'zsign',
